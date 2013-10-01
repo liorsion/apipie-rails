@@ -26,6 +26,15 @@ function execute() {
   method = $("#method-data").data("method");
   $.ajax({ url: url,
   	       type: method,
-  	       data: collected_data
+  	       data: collected_data,
+  	     }).done(function(data, textStatus, jqXHR) {
+  	     		$('#executer_response_status').html(textStatus);
+  	     		if (jqXHR.getResponseHeader("Content-Type").indexOf("json") != 0) {
+  	     			$('#executer_response').html(JSON.stringify(data));
+  	     		} else {
+  	     			$('#executer_response').html(data);
+  	     		}
+  	     }).fail(function(jqXHR, textStatus) {
+  	     		alert("Error: " + textStatus);
   	     })
 }
