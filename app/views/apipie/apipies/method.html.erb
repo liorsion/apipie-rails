@@ -64,6 +64,20 @@
       </tbody>
     </table>
   <% end %>
+
+  <h2>Test</h2>
+  <input type=hidden id="method-data" data-url="<%= @method[:apis][0][:api_url] %>" data-method="<%= @method[:apis][0][:http_method] %>" />
+  <table class='table'>
+      <thead>
+        <tr>
+          <th>Param name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= render(:partial => "executer", :locals => {:params => @method[:params]}) %>
+      </tbody>
+    </table>
 </div>
 
 <% content_for :apipie_footer do %>
