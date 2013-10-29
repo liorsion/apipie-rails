@@ -2,7 +2,7 @@
 <% col = 255 - level * 5 %>
 <% params.each do |param| %>
   <tr style='background-color:rgb(<%= "#{col},#{col},#{col}" %>);'>
-    <td>
+    <td style='padding-left: <%= level * 10%>px'>
       <strong><%= param[:full_name] %> </strong><br>
       <small>
         <%= param[:required] ? 'required' : 'optional' %>
