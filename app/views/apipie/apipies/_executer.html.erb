@@ -20,6 +20,17 @@
 
   <%= render(:partial => "executer", :locals => {:level => level + 1, :params => param[:params]}) unless param[:params].blank? %>
 <% end %>
+<tr style='background-color:rgb(<%= "#{col},#{col},#{col}" %>);'>
+    <td>
+      <input id="_extra_param"  placeholder="Extra Parameters" optional /><br>
+      <small>
+        optional
+      </small>
+    </td>
+    <td>
+      Add any string you want attached to request
+    </td>
+  </tr>
 <tr>
   <td>
     <button onclick="execute();">Execute</button>

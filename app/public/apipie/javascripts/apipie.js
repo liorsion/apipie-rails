@@ -22,6 +22,15 @@ function execute() {
   	alert('Not valid');
   	return;
   }
+
+  extra_params = $('#_extra_param').val().split("&");
+
+  for (extra_param_idx in extra_params) {
+    if (extra_params[extra_param_idx] === '') break;
+    var extra_param = extra_params[extra_param_idx].split("=");
+    collected_data[extra_param[0]] = extra_param[1];
+  }
+
   url = $("#method-data").data("url");
   method = $("#method-data").data("method");
   $.ajax({ url: url,
