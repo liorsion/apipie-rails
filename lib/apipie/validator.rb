@@ -82,7 +82,13 @@ module Apipie
 
       def validate(value)
         return false if value.nil?
-        value.is_a? @type
+        return true if value.is_a? @type
+        begin
+          send(@type.to_s.intern, value)
+          return true
+        rescue NoMethodError
+          return false
+        end
       end
 
       def self.build(param_description, argument, options, block)
@@ -211,7 +217,7 @@ module Apipie
               raise ParamMissing.new(k) if p.required && !value.has_key?(k)
             end
             if Apipie.configuration.validate_value?
-              p.validate(value[k]) if value.has_key?(k)
+              p.validate(value[k]) if value.respond_to?(:has_key?) and value.has_key?(k)
             end
           end
         end

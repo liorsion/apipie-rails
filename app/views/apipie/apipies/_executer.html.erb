@@ -3,11 +3,15 @@
 <% params.each do |param| %>
   <tr style='background-color:rgb(<%= "#{col},#{col},#{col}" %>);'>
     <td>
+    <% if param[:params].blank? %>
       <input id="<%= param[:full_name] %>" data-role='parameter' placeholder="<%= param[:full_name] %>" <%= param[:required] ? 'required' : 'optional' %> /><br>
       <small>
         <%= param[:required] ? 'required' : 'optional' %>
         <%= param[:allow_nil] ? ', nil allowed' : '' %>
       </small>
+    <% else %>
+      <%= param[:full_name] %>
+    <% end %>
     </td>
     <td>
       <%= param[:description].html_safe %>
