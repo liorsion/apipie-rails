@@ -24,6 +24,7 @@
 
   <%= render(:partial => "executer", :locals => {:level => level + 1, :params => param[:params]}) unless param[:params].blank? %>
 <% end %>
+<% if level == 0 %>
 <tr style='background-color:rgb(<%= "#{col},#{col},#{col}" %>);'>
     <td>
       <input id="_extra_param"  placeholder="Extra Parameters" optional /><br>
@@ -56,3 +57,4 @@
     <textarea id="executer_response"></textarea>
   </td>
 </tr>
+<% end %>
