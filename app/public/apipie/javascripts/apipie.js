@@ -32,6 +32,9 @@ function execute() {
   }
 
   url = $("#method-data").data("url");
+  for (collected_param_idx in collected_data) {
+    url = url.replace(':'+collected_param_idx, collected_data[collected_param_idx]);
+  }
   method = $("#method-data").data("method");
   $.ajax({ url: url,
   	       type: method,
