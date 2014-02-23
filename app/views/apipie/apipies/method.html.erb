@@ -29,6 +29,8 @@
 
   <%= raw @method[:full_description] %>
 
+  <%= render(:partial => "method_detail", :locals => {:method => @method, :h_level => 2}) %>
+  
   <% unless @method[:examples].blank? %>
     <h2>Examples</h2>
     <% @method[:examples].each do |example| %>
@@ -78,6 +80,7 @@
         <%= render(:partial => "executer", :locals => {:params => @method[:params]}) %>
       </tbody>
     </table>
+  
 </div>
 
 <% content_for :apipie_footer do %>

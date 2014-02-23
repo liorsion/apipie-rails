@@ -8,8 +8,7 @@ module Apipie
   # validator - Validator::BaseValidator subclass
   class ParamDescription
 
-    attr_reader :method_description, :name, :desc, :allow_nil, :validator, :options
-
+    attr_reader :method_description, :name, :desc, :allow_nil, :validator, :options, :metadata, :show, :as
     attr_accessor :parent, :required
 
     def self.from_dsl_data(method_description, args)
@@ -38,12 +37,21 @@ module Apipie
 
       @method_description = method_description
       @name = concern_subst(name)
+      @as = options[:as] || @name
       @desc = concern_subst(Apipie.markup_to_html(@options[:desc] || ''))
       @parent = @options[:parent]
+      @metadata = @options[:meta]
+
       @required = if @options.has_key? :required
         @options[:required]
       else
         Apipie.configuration.required_by_default?
+      end
+
+      @show = if @options.has_key? :show
+        @options[:show]
+      else
+        true
       end
 
       @allow_nil = @options[:allow_nil] || false
@@ -58,15 +66,24 @@ module Apipie
 
     def validate(value)
       return true if @allow_nil && value.nil?
-      unless @validator.valid?(value)
+      if (!@allow_nil && value.nil?) || !@validator.valid?(value)
         error = @validator.error
         error = ParamError.new(error) unless error.is_a? StandardError
         raise error
       end
     end
 
+    def process_value(value)
+      if @validator.respond_to?(:process_value)
+        @validator.process_value(value)
+      else
+        value
+      end
+    end
+
     def full_name
-      name_parts = parents_and_self.map(&:name)
+      name_parts = parents_and_self.map{|p| p.name if p.show}.compact
+      return name.to_s if name_parts.blank?
       return ([name_parts.first] + name_parts[1..-1].map { |n| "[#{n}]" }).join("")
     end
 
@@ -91,6 +108,8 @@ module Apipie
           :allow_nil => allow_nil,
           :validator => validator.to_s,
           :expected_type => validator.expected_type,
+          :metadata => metadata,
+          :show => show,
           :params => validator.hash_params_ordered.map(&:to_json)
         }
       else
@@ -101,6 +120,8 @@ module Apipie
           :required => required,
           :allow_nil => allow_nil,
           :validator => validator.to_s,
+          :metadata => metadata,
+          :show => show,
           :expected_type => validator.expected_type
         }
       end

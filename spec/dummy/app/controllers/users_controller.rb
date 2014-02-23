@@ -5,13 +5,16 @@ class UsersController < ApplicationController
     path '/users'
     formats ['json']
     param :id, Fixnum, :desc => "User ID", :required => false
-    param :resource_param, Hash, :desc => 'Param description for all methods' do
-      param :ausername, String, :desc => "Username for login", :required => true
-      param :apassword, String, :desc => "Password for login", :required => true
+    param :legacy_param, Hash, :desc => 'Deprecated parameter not documented', :show => false, :required => false do
+      param :resource_param, Hash, :desc => 'Param description for all methods' do
+        param :ausername, String, :desc => "Username for login", :required => true
+        param :apassword, String, :desc => "Password for login", :required => true
+      end
     end
     api_version "development"
-    error 404, "Missing"
+    error 404, "Missing", :meta => {:some => "metadata"}
     error 500, "Server crashed for some <%= reason %>"
+    meta :new_style => true, :author => { :name => 'John', :surname => 'Doe' }
     description <<-EOS
       == Long description
 
@@ -177,6 +180,13 @@ class UsersController < ApplicationController
     val == "param value" ? true : "The only good value is 'param value'."
   }, :desc => "proc validator"
   param :briefer_dsl, String, "You dont need :desc => from now"
+  param :meta_param, String, :desc => "A parameter with some additional metadata", :meta => [:some, :more, :info]
+  meta :success_message => "Some message"
+  param :hash_param, Hash, :desc => "Hash param" do
+    param :dummy_hash, Hash do
+      param :dummy_2, String, :required => true
+    end
+  end
   def show
     unless params[:session] == "secret_hash"
       render :text => "Not authorized", :status => 401
@@ -212,8 +222,11 @@ class UsersController < ApplicationController
     render :text => "OK #{params.inspect}"
   end
 
-  api :PUT, "/users/:id", "Create user"
+  api :PUT, "/users/:id", "Update an user"
   param_group :user
+  param :comments, Array do
+    param :comment, String
+  end
   def update
     render :text => "OK #{params.inspect}"
   end

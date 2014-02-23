@@ -156,6 +156,28 @@ module Apipie
       end
     end
 
+    class ArrayClassValidator < BaseValidator
+
+      def initialize(param_description, argument)
+        super(param_description)
+        @array = argument
+      end
+
+      def validate(value)
+        @array.include?(value.class)
+      end
+
+      def self.build(param_description, argument, options, block)
+        if argument.is_a?(Array) && argument.first.class == Class && !block.is_a?(Proc)
+          self.new(param_description, argument)
+        end
+      end
+
+      def description
+        "Must be one of: #{@array.join(', ')}."
+      end
+    end
+
     class ProcValidator < BaseValidator
 
       def initialize(param_description, argument)
@@ -211,6 +233,7 @@ module Apipie
       end
 
       def validate(value)
+        return false if !value.is_a? Hash
         if @hash_params
           @hash_params.each do |k, p|
             if Apipie.configuration.validate_presence?
@@ -222,6 +245,16 @@ module Apipie
           end
         end
         return true
+      end
+
+      def process_value(value)
+        if @hash_params && value
+          return @hash_params.each_with_object({}) do |(key, param), api_params|
+            if value.has_key?(key)
+              api_params[param.as] = param.process_value(value[key])
+            end
+          end
+        end
       end
 
       def description
@@ -256,7 +289,7 @@ module Apipie
 
 
     # special type of validator: we say that it's not specified
-    class UndefValidator < Apipie::Validator::BaseValidator
+    class UndefValidator < BaseValidator
 
       def validate(value)
         true
@@ -273,7 +306,7 @@ module Apipie
       end
     end
 
-    class NumberValidator < Apipie::Validator::BaseValidator
+    class NumberValidator < BaseValidator
 
       def validate(value)
         self.class.validate(value)
@@ -294,7 +327,7 @@ module Apipie
       end
     end
 
-    class BooleanValidator < Apipie::Validator::BaseValidator
+    class BooleanValidator < BaseValidator
 
       def validate(value)
         %w[true false].include?(value.to_s)
@@ -308,6 +341,41 @@ module Apipie
 
       def description
         "Must be 'true' or 'false'"
+      end
+    end
+
+    class NestedValidator < BaseValidator
+
+      def initialize(param_description, argument, param_group)
+        super(param_description)
+        @validator = Apipie::Validator:: HashValidator.new(param_description, argument, param_group)
+        @type = argument
+      end
+
+      def validate(value)
+        value ||= [] # Rails convert empty array to nil
+        return false if value.class != Array
+        value.each do |child|
+          return false unless @validator.validate(child)
+        end
+        true
+      end
+
+      def process_value(value)
+        value ||= [] # Rails convert empty array to nil
+        @values = []
+        value.each do |child|
+          @values << @validator.process_value(child)
+        end
+        @values
+      end
+
+      def self.build(param_description, argument, options, block)
+        self.new(param_description, block, options[:param_group]) if block.is_a?(Proc) && block.arity == 0 && argument == Array
+      end
+
+      def description
+        "Must be an Array of nested elements"
       end
     end
 

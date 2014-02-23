@@ -2,11 +2,13 @@
  API Documentation Tool
 ========================
 
-.. image:: https://travis-ci.org/Pajk/apipie-rails.png?branch=master
-    :target: https://travis-ci.org/Pajk/apipie-rails
+.. image:: https://travis-ci.org/Apipie/apipie-rails.png?branch=master
+    :target: https://travis-ci.org/Apipie/apipie-rails
+.. image:: https://codeclimate.com/github/Apipie/apipie-rails.png
+    :target: https://codeclimate.com/github/Apipie/apipie-rails
 
 Apipie-rails is a DSL and Rails engine for documenting you RESTful
-API. Instead of traditional use of ``#comments``, Apipie let's you
+API. Instead of traditional use of ``#comments``, Apipie lets you
 describe the code by code. This brings advantages like:
 
 * no need to learn yet another syntax, you already know Ruby, right?
@@ -32,7 +34,7 @@ The easiest way to get Apipie up and running with your app is:
    $ rails g apipie:install
 
 Now you can start documenting your resources and actions (see
-`DSL Reference`_ for more info:
+`DSL Reference`_ for more info):
 
 .. code:: ruby
 
@@ -65,7 +67,7 @@ Authors
 Contributors
 ------------
 
-See `Contributors page  <https://github.com/Pajk/apipie-rails/graphs/contributors>`_. Special thanks to all of them!
+See `Contributors page  <https://github.com/Apipie/apipie-rails/graphs/contributors>`_. Special thanks to all of them!
 
 License
 -------
@@ -125,6 +127,9 @@ error
 app_info
   In case of versioning, this sets app info description on per_version basis.
 
+meta
+  Hash or array with custom metadata.
+
 Example:
 ~~~~~~~~
 
@@ -140,7 +145,8 @@ Example:
      end
      api_version "development"
      error 404, "Missing"
-     error 500, "Server crashed for some <%= reason %>"
+     error 500, "Server crashed for some <%= reason %>", :meta => {:anything => "you can think of"}
+     meta :author => {:name => 'John', :surname => 'Doe'}
      description <<-EOS
        == Long description
         Example resource for rest api documentation
@@ -206,6 +212,9 @@ see
   Provide reference to another method, this has to be string with
   controller_name#method_name.
 
+meta
+  Hash or array with custom metadata.
+
 Example:
 ~~~~~~~~
 
@@ -213,7 +222,7 @@ Example:
 
    api :GET, "/users/:id", "Show user profile"
    error :code => 401, :desc => "Unauthorized"
-   error :code => 404, :desc => "Not Found"
+   error :code => 404, :desc => "Not Found", :meta => {:anything => "you can think of"}
    param :session, String, :desc => "user is logged in", :required => true
    param :regexp_param, /^[0-9]* years/, :desc => "regexp param"
    param :array_param, [100, "one", "two", 1, 2], :desc => "array validator"
@@ -221,8 +230,10 @@ Example:
    param :proc_param, lambda { |val|
      val == "param value" ? true : "The only good value is 'param value'."
    }, :desc => "proc validator"
+   param :param_with_metadata, String, :desc => "", :meta => [:your, :custom, :metadata]
    description "method description"
    formats ['json', 'jsonp', 'xml']
+   meta :message => "Some very important info"
    example " 'user': {...} "
    see "users#showme", "link description"
    see :link => "users#update", :desc => "another link description"
@@ -252,6 +263,15 @@ required
 allow_nil
   Set true is ``nil`` can be passed for this param.
 
+as
+  Use by the processing functionality to change the name of a key params.
+
+meta
+  Hash or array with custom metadata.
+
+show
+  Parameter is hidden from documentation when set to false (true by default)
+
 Example:
 ~~~~~~~~
 
@@ -261,6 +281,7 @@ Example:
      param :username, String, :desc => "Username for login", :required => true
      param :password, String, :desc => "Password for login", :required => true
      param :membership, ["standard","premium"], :desc => "User membership"
+     param :admin_override, String, :desc => "Not shown in documentation", :show => false
    end
    def create
      #...
@@ -485,6 +506,10 @@ validate_value
 validate_presence
   Check the params presence against the documentation.
 
+process_params
+  Process and extract parameter defined from the params of the request
+  to the api_params variable
+
 app_info
   Application long description.
 
@@ -498,7 +523,7 @@ markup
   You can choose markup language for descriptions of your application,
   resources and methods. RDoc is the default but you can choose from
   Apipie::Markup::Markdown.new or Apipie::Markup::Textile.new.
-  In order to use Markdown you need Redcarpet gem and for Textile you
+  In order to use Markdown you need Maruku gem and for Textile you
   need RedCloth. Add those to your gemfile and run bundle if you
   want to use them. You can also add any other markup language
   processor.
@@ -521,6 +546,9 @@ authenticate
   Pass a proc in order to authenticate user. Pass nil for
   no authentication (by default).
 
+show_all_examples
+  Set this to true to set show_in_doc=1 in all recorded examples
+
 Example:
 
 .. code:: ruby
@@ -532,7 +560,7 @@ Example:
      config.api_base_url = "/api"
      config.validate = false
      config.markup = Apipie::Markup::Markdown.new
-     config.reload_controllers = true
+     config.reload_controllers = Rails.env.development?
      config.api_controllers_matcher = File.join(Rails.root, "app", "controllers", "**","*.rb")
      config.app_info = "
        This is where you can inform user about your application and API
@@ -541,10 +569,38 @@ Example:
      config.authenticate = Proc.new do
         authenticate_or_request_with_http_basic do |username, password|
           username == "test" && password == "supersecretpassword"
-       end 
+       end
      end
    end
 
+
+============
+ Processing
+============
+
+The goal is to extract and pre process parameters of the request.
+
+For example Rails, by default, transforms empty array to nil value,
+you want perhaps to transform it again to an empty array. Or you
+want to support an enumeration type (comma separated values) and
+you want automatically transform this string to an array.
+
+To use it, set processing_value configuration variable to true.
+In your action, use api_params variable instead of params.
+
+Also by using `as` you can separate your API parameters
+names from the names you are using inside your code.
+
+To implement it, you just have to write a process_value
+function in your validator:
+
+For an enumeration type:
+
+.. code:: ruby
+
+   def process_value(value)
+    value ? value.split(',') : []
+   end
 
 ============
  Validators
@@ -636,6 +692,20 @@ override parameters described on resource level.
    def destroy
      #...
    end
+
+NestedValidator
+-------------
+
+You can describe nested parameters in depth if you provide a block with
+description of nested values.
+
+.. code:: ruby
+
+   param :comments, Array, :desc => "User comments" do
+     param :name, String, :desc => "Name of the comment", :required => true
+     param :comment, String, :desc => "Full comment", :required => true
+   end
+
 
 
 Adding custom validator
@@ -797,7 +867,8 @@ This will copy the Apipie views to ``app/views/apipie/apipies`` and
 To generate a static version of documentation (perhaps to put it on
 project site or something) run ``rake apipie:static`` task. It will
 create set of html files (multi-pages, single-page, plain) in your doc
-directory. By default the documentation for default API version is
+directory. If you prefer a json version run ``rake apipie:static_json``.
+By default the documentation for default API version is
 used, you can specify the version with ``rake apipie:static[2.0]``
 
 When you want to avoid any unnecessary computation in production mode,

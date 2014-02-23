@@ -12,6 +12,73 @@ describe Apipie::ParamDescription do
     Apipie::MethodDescription.new(:show, resource_desc, dsl_data)
   end
 
+  describe "metadata" do
+
+    it "should return nil when no metadata is provided" do
+      param = Apipie::ParamDescription.new(method_desc, :some_param, String)
+      param.to_json[:metadata].should == nil
+    end
+
+    it "should return the metadata" do
+      meta = {
+        :lenght => 32,
+        :weight => '830g'
+      }
+      param = Apipie::ParamDescription.new(method_desc, :some_param, String, :meta => meta)
+      param.to_json[:metadata].should == meta
+    end
+
+  end
+
+  describe "show option" do
+
+    it "should return true when show option is not provided" do
+      param = Apipie::ParamDescription.new(method_desc, :some_param, String)
+      param.to_json[:show].should == true
+    end
+
+    it "should return the show option" do
+      param = Apipie::ParamDescription.new(method_desc, :some_param, String, :show => true)
+      param.to_json[:show].should == true
+
+      param = Apipie::ParamDescription.new(method_desc, :some_param, String, :show => false)
+      param.to_json[:show].should == false
+    end
+
+  end
+
+  describe "full_name" do
+    context "with no nested parameters" do
+
+      it "should return name" do
+        param = Apipie::ParamDescription.new(method_desc, :some_param, String)
+        param.to_json[:full_name].should == 'some_param'
+      end
+
+    end
+
+    context "with nested parameters" do
+
+      it "should return the parameter's name nested in the parents name" do
+        parent_param = Apipie::ParamDescription.new(method_desc, :parent, String)
+        nested_param = Apipie::ParamDescription.new(method_desc, :nested, String, :parent => parent_param)
+
+        nested_param.to_json[:full_name].should == 'parent[nested]'
+      end
+
+      context "with the parent parameter set to not show" do
+
+        it "should return just the parameter's name" do
+          parent_param = Apipie::ParamDescription.new(method_desc, :parent, String, :show => false)
+          nested_param = Apipie::ParamDescription.new(method_desc, :nested, String, :parent => parent_param)
+
+          nested_param.to_json[:full_name].should == 'nested'
+        end
+
+      end
+    end
+  end
+
   describe "validator selection" do
 
     it "should allow nil validator" do
@@ -171,4 +238,14 @@ describe Apipie::ParamDescription do
       end
     end
   end
+
+
+  describe "Array with classes" do
+    it "should be valid for objects included in class array" do
+      param = Apipie::ParamDescription.new(method_desc, :param, [Fixnum, String])
+      expect { param.validate("1") }.should_not raise_error
+      expect { param.validate(Fixnum) }.should raise_error
+    end
+  end
+
 end

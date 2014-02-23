@@ -6,7 +6,7 @@ module Apipie
   module DSL
 
     module Base
-      attr_reader :apipie_resource_descriptions
+      attr_reader :apipie_resource_descriptions, :api_params
 
       private
 
@@ -29,7 +29,8 @@ module Apipie
          :examples          => [],
          :see               => [],
          :formats           => nil,
-         :api_versions      => []
+         :api_versions      => [],
+         :meta              => nil
        }
       end
     end
@@ -76,7 +77,7 @@ module Apipie
       # Example:
       #   api :GET, "/resource_route", "short description",
       #
-      def api(method, path, desc = nil) #:doc:
+      def api(method, path, desc = nil, options={}) #:doc:
         return unless Apipie.active_dsl?
         _apipie_dsl_data[:api_args] << [method, path, desc]
       end
@@ -164,20 +165,27 @@ module Apipie
         _apipie_dsl_data[:formats] = formats
       end
 
+      # Describe additional metadata
+      #
+      #   meta :author => { :name => 'John', :surname => 'Doe' }
+      def meta(meta) #:doc:
+        _apipie_dsl_data[:meta] = meta
+      end
+
 
       # Describe possible errors
       #
       # Example:
-      #   error :desc => "speaker is sleeping", :code => 500
+      #   error :desc => "speaker is sleeping", :code => 500, :meta => [:some, :more, :data]
       #   error 500, "speaker is sleeping"
       #   def hello_world
       #     return 500 if self.speaker.sleeping?
       #     puts "hello world"
       #   end
       #
-      def error(*args) #:doc:
+      def error(code_or_options, desc=nil, options={}) #:doc:
         return unless Apipie.active_dsl?
-        _apipie_dsl_data[:errors] << args
+        _apipie_dsl_data[:errors] << [code_or_options, desc, options]
       end
 
       def _apipie_define_validators(description)
@@ -186,6 +194,8 @@ module Apipie
 
           old_method = instance_method(description.method)
 
+
+          # @todo we should use before_filter
           define_method(description.method) do |*args|
 
             if Apipie.configuration.validate_presence?
@@ -199,6 +209,15 @@ module Apipie
               description.params.each do |_, param|
                 # params validations
                 param.validate(params[:"#{param.name}"]) if params.has_key?(param.name)
+              end
+            end
+
+            if Apipie.configuration.process_value?
+              @api_params = {}
+
+              description.params.each do |_, param|
+                # params processing
+                @api_params[param.as] = param.process_value(params[:"#{param.name}"]) if params.has_key?(param.name)
               end
             end
 

@@ -110,6 +110,13 @@ describe UsersController do
         assert_response :success
       end
 
+      it "should work with nil value for a required hash param" do
+        expect {
+          get :show, :id => '5', :session => "secret_hash", :hash_param => {:dummy_hash => nil}
+        }.to raise_error(Apipie::ParamInvalid, /dummy_hash/)
+        assert_response :success
+      end
+
       it "should fail if required parameter is missing" do
         lambda { get :show, :id => 5 }.should raise_error(Apipie::ParamMissing, /\bsession\b/)
       end
@@ -142,7 +149,7 @@ describe UsersController do
         assert_response :success
         get :show, :id => 5, :session => "secret_hash", :array_param => "two"
         assert_response :success
-        get :show, :id => 5, :session => "secret_hash", :array_param => 1
+        get :show, :id => 5, :session => "secret_hash", :array_param => '1'
         assert_response :success
         get :show, :id => 5, :session => "secret_hash", :boolean_param => false
         assert_response :success
@@ -199,6 +206,10 @@ describe UsersController do
           post :create, :user => { :name => "root" }
         }.should raise_error(Apipie::ParamMissing, /pass/)
 
+        lambda {
+          post :create, :user => "a string is not a hash"
+        }.should raise_error(Apipie::ParamInvalid, /user/)
+
         post :create, :user => { :name => "root", :pass => "pwd" }
         assert_response :success
       end
@@ -211,6 +222,8 @@ describe UsersController do
                               :description => "\n<p>Additional optional facts about the user</p>\n",
                               :required => false,
                               :allow_nil => true,
+                              :metadata => nil,
+                              :show => true,
                               :expected_type => "hash")
       end
 
@@ -223,6 +236,67 @@ describe UsersController do
              },
              :facts => nil
         assert_response :success
+      end
+
+      describe "nested elements"  do
+
+        context "with valid input" do
+          it "should succeed" do
+            put :update,
+                {
+                  :id => 5,
+                  :user => {
+                    :name => "root",
+                    :pass => "12345"
+                  },
+                  :comments => [
+                    {
+                      :comment => 'comment1'
+                    },
+                    {
+                      :comment => 'comment2'
+                    }
+                  ]
+                }
+
+            assert_response :success
+          end
+        end
+        context "with bad input" do
+          it "should raise an error" do
+            expect{ put :update,
+                {
+                  :id => 5,
+                  :user => {
+                    :name => "root",
+                    :pass => "12345"
+                  },
+                  :comments => [
+                    {
+                      :comment => 'comment1'
+                    },
+                    {
+                      :comment => {bad_input: 5}
+                    }
+                  ]
+                }
+            }.to raise_error(Apipie::ParamInvalid)
+          end
+        end
+        it "should work with empty array" do
+          put :update,
+              {
+                :id => 5,
+                :user => {
+                  :name => "root",
+                  :pass => "12345"
+                },
+                :comments => [
+                ]
+              }
+
+          assert_response :success
+        end
       end
 
     end
@@ -297,8 +371,8 @@ describe UsersController do
 
     it "should contain all params description" do
       a = Apipie.get_method_description(UsersController, :show)
-      a.params.count.should == 9
-      a.instance_variable_get('@params_ordered').count.should == 7
+      a.params.count.should == 11
+      a.instance_variable_get('@params_ordered').count.should == 9
     end
 
     it "should contain all api method description" do
@@ -319,7 +393,7 @@ describe UsersController do
     it "should be described by valid json" do
       json = Apipie[UsersController, :two_urls].to_json
       expected_hash = {
-        :errors => [{:code=>404, :description=>"Missing"},
+        :errors => [{:code=>404, :description=>"Missing", :metadata => {:some => "metadata"}},
                     {:code=>500, :description=>"Server crashed for some <%= reason %>"}],
         :examples => [],
         :doc_url => "#{Apipie.configuration.doc_base_url}/development/users/two_urls",
@@ -331,33 +405,48 @@ describe UsersController do
                      :validator=>"Must be String",
                      :description=>"\n<p>Authorization</p>\n",
                      :name=>"oauth",
+                     :show=>true,
                      :expected_type=>"string"},
                     {:validator=>"Must be a Hash",
-                     :description=>"\n<p>Param description for all methods</p>\n",
+                     :description=>"\n<p>Deprecated parameter not documented</p>\n",
                      :expected_type=>"hash",
                      :allow_nil=>false,
-                     :name=>"resource_param",
+                     :name=>"legacy_param",
                      :required=>false,
-                     :full_name=>"resource_param",
+                     :full_name=>"legacy_param",
+                     :show=>false,
                      :params=>
-                      [{:required=>true,
-                        :allow_nil => false,
-                        :validator=>"Must be String",
-                        :description=>"\n<p>Username for login</p>\n",
-                        :name=>"ausername", :full_name=>"resource_param[ausername]",
-                        :expected_type=>"string"},
-                       {:required=>true,
-                        :allow_nil => false,
-                        :validator=>"Must be String",
-                        :description=>"\n<p>Password for login</p>\n",
-                        :name=>"apassword", :full_name=>"resource_param[apassword]",
-                        :expected_type=>"string"}
+                      [{:validator=>"Must be a Hash",
+                        :description=>"\n<p>Param description for all methods</p>\n",
+                        :expected_type=>"hash",
+                        :allow_nil=>false,
+                        :name=>"resource_param",
+                        :required=>false,
+                        :full_name=>"resource_param",
+                        :show=>true,
+                        :params=>
+                        [{:required=>true,
+                          :allow_nil => false,
+                          :validator=>"Must be String",
+                          :description=>"\n<p>Username for login</p>\n",
+                          :name=>"ausername", :full_name=>"resource_param[ausername]",
+                          :show=>true,
+                          :expected_type=>"string"},
+                         {:required=>true,
+                          :allow_nil => false,
+                          :validator=>"Must be String",
+                          :description=>"\n<p>Password for login</p>\n",
+                          :name=>"apassword", :full_name=>"resource_param[apassword]",
+                          :show=>true,
+                          :expected_type=>"string"}
+                        ]}
                       ]
                     },
                     {:required=>false, :validator=>"Parameter has to be Integer.",
                      :allow_nil => false,
                      :description=>"\n<p>Company ID</p>\n",
                      :name=>"id", :full_name=>"id",
+                     :show=>true,
                      :expected_type=>"numeric"},
        ],
         :name => 'two_urls',
@@ -474,6 +563,28 @@ EOS2
         Apipie.define_method_description(IgnoredController, :ignore, dsl_data)
         Apipie.get_method_description(IgnoredController, :ignore).should be_nil
       end
+    end
+  end
+
+  describe "Parameter processing / extraction" do
+    before do
+      Apipie.configuration.process_params = true
+    end
+
+    it "process correctly the parameters" do
+      post :create, {:user => {:name => 'dummy', :pass => 'dummy', :membership => 'standard'}, :facts => nil}
+
+      expect(assigns(:api_params).with_indifferent_access).to eq({:user => {:name=>"dummy", :pass=>"dummy", :membership=>"standard"}, :facts => nil}.with_indifferent_access)
+    end
+
+    it "ignore not described parameters" do
+      post :create, {:user => {:name => 'dummy', :pass => 'dummy', :membership => 'standard', :id => 0}}
+
+      expect(assigns(:api_params).with_indifferent_access).to eq({:user => {:name=>"dummy", :pass=>"dummy", :membership=>"standard"}}.with_indifferent_access)
+    end
+
+    after do
+      Apipie.configuration.process_params = false
     end
   end
 end
