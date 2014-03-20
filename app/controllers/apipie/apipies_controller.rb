@@ -43,6 +43,7 @@ module Apipie
 
           @versions = Apipie.available_versions
           @doc = @doc[:docs]
+          @doc[:link_extension] = Apipie.configuration.link_extension
           if @doc[:resources].blank?
             render "getting_started" and return
           end
@@ -60,6 +61,9 @@ module Apipie
           end
         end
       end
+    end
+
+    def apipie_checksum
     end
 
     private

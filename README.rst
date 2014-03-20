@@ -519,6 +519,9 @@ reload_controllers
 api_controllers_matcher
   For reloading to work properly you need to specify where your API controllers are. Can be an array if multiple paths are needed
 
+api_routes
+  Set if your application uses custom API router, different from Rails default
+
 markup
   You can choose markup language for descriptions of your application,
   resources and methods. RDoc is the default but you can choose from
@@ -549,6 +552,10 @@ authenticate
 show_all_examples
   Set this to true to set show_in_doc=1 in all recorded examples
 
+link_extension
+  The extension to use for API pages ('.html' by default).  Link extensions
+  in static API docs cannot be changed from '.html'. 
+
 Example:
 
 .. code:: ruby
@@ -562,6 +569,7 @@ Example:
      config.markup = Apipie::Markup::Markdown.new
      config.reload_controllers = Rails.env.development?
      config.api_controllers_matcher = File.join(Rails.root, "app", "controllers", "**","*.rb")
+     config.api_routes = Rails.application.routes
      config.app_info = "
        This is where you can inform user about your application and API
        in general.
@@ -573,6 +581,11 @@ Example:
      end
    end
 
+checksum_path
+  Used in ChecksumInHeaders middleware (see `JSON checksums`_ for more info). It contains path prefix(es) where the header with checksum is added. If set to nil, checksum is added in headers in every response. e.g. ``%w[/api /apipie]``
+
+update_checksum
+  If set to true, the checksum is recalculated with every documentation_reload call
 
 ============
  Processing
@@ -876,6 +889,42 @@ you can generate a cache with ``rake apipie:cache`` and configure the
 app to use it in production with ``config.use_cache = Rails.env.production?``
 
 ===================
+ JSON checksums
+===================
+
+If the API client needs to be sure that the JSON didn't changed, add
+the ``ApipieChecksumInHeaders`` middleware in your rails app.
+It can add checksum of entiere JSON document in the response headers.
+
+.. code::
+
+  "Apipie-Checksum"=>"fb81460e7f4e78d059f826624bdf9504"
+
+`Apipie bindings <https://github.com/Apipie/apipie-bindings>`_ uses this feature to refresh its JSON cache.
+
+To set it up add the following to your ``application.rb``
+
+.. code::
+
+   require 'apipie/middleware/checksum_in_headers'
+   # Add JSON checksum in headers for smarter caching
+   config.middleware.use "Apipie::Middleware::ChecksumInHeaders"
+
+And in your apipie initializer allow checksum calculation
+
+.. code::
+
+   Apipie.configuration.update_checksum = true
+
+
+By default the header is added to responses for ``config.doc_base_url`` and ``/api``.
+It can be changed in configuration (see `Configuration Reference`_ for details).
+
+The checksum calculation is lazy, done with first request. If you run with ``use_cache = true``,
+do not forget to run the rake task ``apipie:cache``.
+
+
+===================
  Tests Integration
 ===================
 
@@ -999,6 +1048,7 @@ use exactly this approach. You also don't need to run the service,
 provided it uses Apipie as a backend.
 
 And if you write one on your own, don't hesitate to share it with us!
+
 
 ====================
  Disqus Integration

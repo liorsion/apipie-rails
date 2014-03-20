@@ -1,5 +1,7 @@
 require 'apipie/static_dispatcher'
 require 'yaml'
+require 'digest/md5'
+require 'json'
 
 module Apipie
 
@@ -209,7 +211,7 @@ module Apipie
       if File.exists?(tape_file)
         #if SafeYAML gem is enabled, it will load examples as an array of Hash, instead of hash
         if YAML.respond_to?(:safe_load_file) && defined?(SafeYAML)
-          @recorded_examples = SafeYAML.load_file(tape_file, :safe=>false)
+          @recorded_examples = YAML.load_file(tape_file, :safe=>false)
         else
           @recorded_examples = YAML.load_file(tape_file)
         end
@@ -257,13 +259,38 @@ module Apipie
     end
 
     def reload_documentation
-      rails_mark_classes_for_reload
-      init_env
-      reload_examples
+      if rails_mark_classes_for_reload
+        # if we are not able to mark classes for reload, we
+        # can't reinit the env, as we would loose the data that were
+        # already loaded
+        init_env
+        reload_examples
+      end
 
       api_controllers_paths.each do |f|
         load_controller_from_file f
       end
+      @checksum = nil if Apipie.configuration.update_checksum
+    end
+
+    def compute_checksum
+      if Apipie.configuration.use_cache?
+        file_base = File.join(Apipie.configuration.cache_dir, Apipie.configuration.doc_base_url)
+        all_docs = {}
+        Dir.glob(file_base + '/*.json').sort.each do |f|
+          all_docs[File.basename(f, '.json')] = JSON.parse(File.read(f))
+        end
+      else
+        reload_documentation if available_versions == []
+        all_docs = Apipie.available_versions.inject({}) do |all, version|
+          all.update(version => Apipie.to_json(version))
+        end
+      end
+      Digest::MD5.hexdigest(JSON.dump(all_docs))
+    end
+
+    def checksum
+      @checksum ||= compute_checksum
     end
 
     # Is there a reason to interpret the DSL for this run?
@@ -327,9 +354,15 @@ module Apipie
     # docs, therefore we just force to reload all the code. This
     # happens only when reload_controllers is set to true and only
     # when showing the documentation.
+    #
+    # If cache_classes is set to false, it does nothing,
+    # as this would break loading of the controllers.
     def rails_mark_classes_for_reload
-      ActiveSupport::DescendantsTracker.clear
-      ActiveSupport::Dependencies.clear
+      unless Rails.application.config.cache_classes
+        ActiveSupport::DescendantsTracker.clear
+        ActiveSupport::Dependencies.clear
+        return true
+      end
     end
 
   end

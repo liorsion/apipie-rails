@@ -30,6 +30,9 @@ Apipie.configure do |config|
   # for reloading to work properly you need to specify where your api controllers are (like in Dir.glob):
   config.api_controllers_matcher = File.join(Rails.root, "app", "controllers", "**","*.rb")
 
+  # specify routes if your application uses router differ from Rails default one
+  config.api_routes = Rails.application.routes
+
   # config.markup = choose one of:
   #   Apipie::Markup::RDoc.new [default]
   #   Apipie::Markup::Markdown.new
@@ -64,6 +67,10 @@ Apipie.configure do |config|
   # specify disqus site shortname to show discusion on each page
   # to show it in custom layout, use `render 'disqus' if Apipie.configuration.use_disqus?`
   # config.disqus_shortname = 'paveltest'
+
+  # Hide '.html' extensions.  Note that '.html' extensions are forced
+  # when generating static documentation
+  # config.link_extension = ""
 end
 
 
