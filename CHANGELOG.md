@@ -2,6 +2,54 @@
  Changelog
 ===========
 
+v0.2.2
+------
+
+* prevent rspec 3 from being used. It is not compatible.
+  [#255](https://github.com/Apipie/apipie-rails/pull/255) [@lsylvester][]
+* fixed extractor root route (handle nil path)
+  [#257](https://github.com/Apipie/apipie-rails/pull/257) [@ctria][]
+* reduced rails dependency to development only
+  [#266](https://github.com/Apipie/apipie-rails/pull/266) [@klobuczek][]
+* reduced rails dependency to development only
+  [#266](https://github.com/Apipie/apipie-rails/pull/266) [@klobuczek][]
+* add more options to apipie:cache to generate only parts of the
+  static pages
+  [#262](https://github.com/Apipie/apipie-rails/pull/262) [@mbacovsky][]
+
+v0.2.1
+------
+
+* fix typo in the localization string
+  [#244](https://github.com/Apipie/apipie-rails/pull/244) [@alem0lars][]
+* fix syntax errors in 404 page
+  [#246](https://github.com/Apipie/apipie-rails/pull/246) [@richardsondx][]
+
+
+v0.2.0
+------
+
+This is not full backward compatible release, as the format of storing
+examples changed from YAML to JSON: the default location is at
+`doc/apipie_examples.json`. The migration should be as easy as
+running:
+
+```
+rake apipie:convert_examples
+```
+
+Also please not Rails 3.0 support was deprecated and the compatibility
+wont be tracked anymore in next releases.
+
+* dump examples as json
+  [#125](https://github.com/Apipie/apipie-rails/pull/125) [@johanneswuerbach][]
+* support for localized API documentation
+  [#232](https://github.com/Apipie/apipie-rails/pull/232) [@mbacovsky][]
+* configuration option to always record examples
+  [#239](https://github.com/Apipie/apipie-rails/pull/239) [@arathunku][]
+* deprecate Rails 3.0
+  [#241](https://github.com/Apipie/apipie-rails/pull/241) [@iNecas][]
+
 v0.1.3
 ------
 
@@ -119,3 +167,10 @@ v0.0.15
 [@mkrajewski]: https://github.com/mkrajewski
 [@iNecas]: https://github.com/iNecas
 [@clamoris]: https://github.com/clamoris
+[@arathunku]: https://github.com/arathunku
+[@johanneswuerbach]: https://github.com/johanneswuerbach
+[@richardsondx]: https://github.com/richardsondx
+[@alem0lars]: https://github.com/alem0lars
+[@lsylvester]: https://github.com/lsylverster
+[@ctria]: https://github.com/ctria
+[@klobuczek]: https://github.com/klobuczek

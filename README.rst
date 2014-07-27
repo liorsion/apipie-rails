@@ -554,7 +554,25 @@ show_all_examples
 
 link_extension
   The extension to use for API pages ('.html' by default).  Link extensions
-  in static API docs cannot be changed from '.html'. 
+  in static API docs cannot be changed from '.html'.
+
+languages
+  List of languages API documentation should be translated into. Empty list by default.
+
+default_locale
+  Locale used for generating documentation when no specific locale is set.
+  Set to 'en' by default.
+
+locale
+  Pass locale setter/getter
+
+.. code:: ruby
+
+    config.locale = lambda { |loc| loc ? FastGettext.set_locale(loc) : FastGettext.locale }
+
+translate
+  Pass proc to translate strings using localization library your project uses.
+  For example see `Localization`_
 
 Example:
 
@@ -651,14 +669,14 @@ Check parameter value against given regular expression.
    param :regexp_param, /^[0-9]* years/, :desc => "regexp param"
 
 
-ArrayValidator
+EnumValidator
 --------------
 
 Check if parameter value is included given array.
 
 .. code:: ruby
 
-   param :array_param, [100, "one", "two", 1, 2], :desc => "array validator"
+   param :enum_param, [100, "one", "two", 1, 2], :desc => "enum validator"
 
 
 ProcValidator
@@ -705,6 +723,49 @@ override parameters described on resource level.
    def destroy
      #...
    end
+
+ArrayValidator
+--------------
+
+Check if the parameter is an array
+
+Additional options
+~~~~~~~~~~~~~~~~~
+
+of
+  Specify the type of items. if not given it accepts an array of any item type
+
+in
+  Specifiy an array of valid items value.
+
+Examples
+~~~~~~~~
+
+Assert `things` is an array of any items
+
+.. code:: ruby
+
+  param :things, Array
+
+Assert `hits` must be an array of integer values
+
+.. code:: ruby
+
+  param :hits, Array, of: Integer
+
+Assert `colors` must be an array of valid string values
+
+.. code:: ruby
+
+  param :colors, Array, in: ["red", "green", "blue"]
+
+
+The retrieving of valid items can be deferred until needed using a lambda. It is evaluated only once
+
+.. code:: ruby
+
+  param :colors, Array, in: ->  { Color.all.pluck(:name) }
+
 
 NestedValidator
 -------------
@@ -831,7 +892,7 @@ keyword. It specifies the versions the example is used for. When not
 specified, it's shown in all versions with given method.
 
 When referencing or quering the resource/method descripion, this
-format should be used: "verson#resource#method". When not specified,
+format should be used: "version#resource#method". When not specified,
 the default version is used instead.
 
 
@@ -863,6 +924,79 @@ For inspiration this is how Textile markup usage looks like:
      end
    end
 
+============
+Localization
+============
+
+Apipie has support for localized API documentation in both formats (JSON and HTML).
+Apipie uses the library I18n for localization of itself.
+Check ``config/locales`` directory for available translation.
+
+Major part of strings in the documentation comes from the API.
+As prefferences about localization libraries differs among project, Apipie needs to know how to set locale for your project
+and how to translate a string using library your project use. That can be done using lambdas in configuration.
+
+Sample configuration when your project use FastGettext
+
+
+.. code:: ruby
+
+   Apipie.configure do |config|
+    ...
+    config.languages = ['en', 'cs']
+    config.default_locale = 'en'
+    config.locale = lambda { |loc| loc ? FastGettext.set_locale(loc) : FastGettext.locale }
+    config.translate = lambda do |str, loc|
+      old_loc = FastGettext.locale
+      FastGettext.set_locale(loc)
+      trans = _(str)
+      FastGettext.set_locale(old_loc)
+      trans
+    end
+   end
+
+And the strings in API documentation needs to be marked with the ``N_()`` function
+
+.. code:: ruby
+
+  api :GET, "/users/:id", N_("Show user profile")
+  param :session, String, :desc => N_("user is logged in"), :required => true
+
+
+
+When your project use I18n, localization related configuration could look like as follows
+
+.. code:: ruby
+
+   Apipie.configure do |config|
+    ...
+    config.languages = ['en', 'cs']
+    config.default_locale = 'en'
+    config.locale = lambda { |loc| loc ? I18n.locale = loc : I18n.locale }
+    config.translate = lambda do |str, loc|
+      old_loc = I18n.locale
+      I18n.locale = loc
+      trans = I18n.t(str)
+      I18n.locale = old_loc
+      trans
+    end
+   end
+
+And the strings in API documentation needs to be in the form of translation keys
+
+.. code:: ruby
+
+  api :GET, "/users/:id", "show_user_profile"
+  param :session, String, :desc => "user_is_logged_in", :required => true
+
+
+The localized versions of the documentation are distinguished by languge in the filename.
+E.g. ``doc/apidoc/apidoc.cs.html`` is static documentation in the Czech language.
+If the language is missing, e.g. ``doc/apidoc/apidoc.html``,
+the documentation is localized with the ``default_locale``.
+
+The dynamic documentation follows the same schema. The ``http://localhost:3000/apidoc/v1.cs.html`` is documentation for version '1' of the API in the Czech language. For JSON description of the API applies the same: ``http://localhost:3000/apidoc/v1.cs.json``
+
 
 ================
 Modifying Views
@@ -887,6 +1021,10 @@ used, you can specify the version with ``rake apipie:static[2.0]``
 When you want to avoid any unnecessary computation in production mode,
 you can generate a cache with ``rake apipie:cache`` and configure the
 app to use it in production with ``config.use_cache = Rails.env.production?``
+
+If, for some complex casese, you need to generate/re-generate just part of the cache
+use ``rake apipie:cache cache_part=index`` resp. ``rake apipie:cache cache_part=resources``
+To generate it to different location for further processing use ``rake apipie:cache OUT=/tmp/apipie_cache``.
 
 ===================
  JSON checksums
@@ -940,7 +1078,7 @@ of information is already included in this tests, it just needs to be
 extracted somehow. Luckily, Apipie provides such a feature.
 
 When running the tests, set the ``APIPIE_RECORD=params`` environment
-variable. You can either use it with functional tests
+variable or call ``Apipie.record('params')`` from specs starter. You can either use it with functional tests
 
 .. code::
 
@@ -962,7 +1100,7 @@ Examples Recording
 
 You can also use the tests to generate up-to-date examples for your
 code. Similarly to the bootstrapping, you can use it with functional
-tests or a running server, setting ``APIPIE_RECORD=examples``
+tests or a running server, setting ``APIPIE_RECORD=examples`` or by calling ``Apipie.record('examples')`` in your specs starter.
 
 .. code::
 

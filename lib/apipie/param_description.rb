@@ -38,7 +38,8 @@ module Apipie
       @method_description = method_description
       @name = concern_subst(name)
       @as = options[:as] || @name
-      @desc = concern_subst(Apipie.markup_to_html(@options[:desc] || ''))
+      @desc = preformat_text(@options[:desc])
+
       @parent = @options[:parent]
       @metadata = @options[:meta]
 
@@ -98,10 +99,10 @@ module Apipie
       ret
     end
 
-    def to_json
+    def to_json(lang = nil)
       hash = { :name => name.to_s,
                :full_name => full_name,
-               :description => desc,
+               :description => preformat_text(Apipie.app.translate(@options[:desc], lang)),
                :required => required,
                :allow_nil => allow_nil,
                :validator => validator.to_s,
@@ -109,7 +110,7 @@ module Apipie
                :metadata => metadata,
                :show => show }
       if sub_params = validator.params_ordered
-        hash[:params] = sub_params.map(&:to_json)
+        hash[:params] = sub_params.map { |p| p.to_json(lang)}
       end
       hash
     end
@@ -195,6 +196,10 @@ module Apipie
       return original if replaced == string
       return replaced.to_sym if original.is_a? Symbol
       return replaced
+    end
+
+    def preformat_text(text)
+      concern_subst(Apipie.markup_to_html(text || ''))
     end
 
   end
