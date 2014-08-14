@@ -33,45 +33,8 @@
     Also see <%= @method[:see].map { |s| link_to(s[:description], "#{s[:link]}#{@doc[:link_extension]}") }.to_sentence.html_safe %>.
   <% end %>
 
-  <%= raw @method[:full_description] %>
-
   <%= render(:partial => "method_detail", :locals => {:method => @method, :h_level => 2}) %>
-  
-  <% unless @method[:examples].blank? %>
-    <h2>Examples</h2>
-    <% @method[:examples].each do |example| %>
-      <pre class="prettyprint"><%= example %></pre>
-    <% end %>
-  <% end %>
-
-  <% unless @method[:formats].blank? %>
-    <h2>Supported Formats</h2>
-    <%= @method[:formats].join(', ') %>
-  <% end %>
-
-  <% unless @method[:errors].blank? %>
-    <h2>Errors</h2>
-    <% @method[:errors].each do |err| %>
-      <%= err[:code] %>
-      <%= err[:description] %>
-      <br>
-    <% end %>
-  <% end %>
-
-  <% unless @method[:params].blank? %>
-    <h2>Params</h2>
-    <table class='table'>
-      <thead>
-        <tr>
-          <th>Param name</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        <%= render(:partial => "params", :locals => {:params => @method[:params]}) %>
-      </tbody>
-    </table>
-  <% end %>
+</div>
 
   <h2>Test</h2>
   <input type=hidden id="method-data" data-url="<%= @method[:apis][0][:api_url] %>" data-method="<%= @method[:apis][0][:http_method] %>" />
@@ -86,7 +49,7 @@
         <%= render(:partial => "executer", :locals => {:params => @method[:params]}) %>
       </tbody>
     </table>
-  
+
 </div>
 
 <% unless content_for(:apipie_footer) == @doc[:copyright] %>
