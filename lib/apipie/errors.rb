@@ -11,6 +11,14 @@ module Apipie
           format.json { render json: {error: e.to_s}, status: 400 }
         end
       end
+
+      base.rescue_from TypeError do |e|
+        respond_to do |format|
+          format.html { render :show, status: @status_code, layout: !request.xhr? }
+          format.xml  { render xml: e, root: "error", status: 400 }
+          format.json { render json: {error: e.to_s}, status: 400 }
+        end
+      end
     end
 
   end
