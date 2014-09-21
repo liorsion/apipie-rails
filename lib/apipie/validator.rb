@@ -88,7 +88,6 @@ module Apipie
         return false if value.nil?
         return true if value.is_a? @type
         begin
-          binding.pry
           send(@type.to_s.intern, value)
           return true
         rescue NoMethodError
