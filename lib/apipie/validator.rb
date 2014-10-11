@@ -181,6 +181,10 @@ module Apipie
         "Must be an array of #{items}"
       end
 
+      def expected_type
+        "array"
+      end
+
       def self.build(param_description, argument, options, block)
         if argument == Array && !block.is_a?(Proc)
           self.new(param_description, argument, options)
@@ -409,6 +413,10 @@ module Apipie
         end
       end
 
+      def expected_type
+        'boolean'
+      end
+
       def description
         "Must be 'true' or 'false'"
       end
@@ -444,6 +452,10 @@ module Apipie
         # in Ruby 1.8.x the arity on block without args is -1
         # while in Ruby 1.9+ it is 0
         self.new(param_description, block, options[:param_group]) if block.is_a?(Proc) && block.arity <= 0 && argument == Array
+      end
+
+      def expected_type
+        'array'
       end
 
       def description
